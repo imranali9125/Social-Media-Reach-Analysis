@@ -1,0 +1,282 @@
+
+# ============================================================
+# PROJECT: SOCIAL MEDIA REACH ANALYSIS
+# Technologies: Python, Pandas, NumPy, Matplotlib, Seaborn
+# ============================================================
+
+# 1. IMPORT LIBRARIES
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 2. CREATE SAMPLE DATASET
+
+np.random.seed(42)
+
+n = 150
+
+platforms = ["Instagram", "Facebook", "Twitter"]
+content_types = ["Image", "Video", "Reel", "Carousel"]
+
+data = {
+    "Post_ID": range(1, n + 1),
+    "Date": pd.date_range(start="2026-01-01", periods=n, freq="2D"),
+    "Platform": np.random.choice(platforms, n),
+    "Content_Type": np.random.choice(content_types, n),
+    "Reach": np.random.randint(1000, 20000, n),
+    "Impressions": np.random.randint(2000, 30000, n),
+    "Likes": np.random.randint(100, 3000, n),
+    "Comments": np.random.randint(10, 500, n),
+    "Shares": np.random.randint(5, 400, n)
+}
+
+df = pd.DataFrame(data)
+
+# 3. DATA CLEANING
+
+print("\n========== DATASET INFORMATION ==========")
+print(df.head())
+
+print("\nDataset Shape:", df.shape)
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+df.drop_duplicates(inplace=True)
+df.dropna(inplace=True)
+
+# 4. DATA ANALYSIS
+
+# Calculate total engagement
+df["Total_Engagement"] = (
+    df["Likes"] + df["Comments"] + df["Shares"]
+)
+
+# Calculate engagement rate
+df["Engagement_Rate"] = (
+    df["Total_Engagement"] / df["Reach"]
+) * 100
+
+# Extract month
+df["Month"] = df["Date"].dt.strftime("%B")
+
+# Overall KPIs
+total_reach = df["Reach"].sum()
+total_impressions = df["Impressions"].sum()
+total_likes = df["Likes"].sum()
+total_comments = df["Comments"].sum()
+total_shares = df["Shares"].sum()
+average_engagement = df["Engagement_Rate"].mean()
+
+print("\n========== OVERALL PERFORMANCE ==========")
+print("Total Posts:", len(df))
+print("Total Reach:", f"{total_reach:,}")
+print("Total Impressions:", f"{total_impressions:,}")
+print("Total Likes:", f"{total_likes:,}")
+print("Total Comments:", f"{total_comments:,}")
+print("Total Shares:", f"{total_shares:,}")
+print("Average Engagement Rate:", round(average_engagement, 2), "%")
+
+# 5. PLATFORM-WISE ANALYSIS
+
+platform_analysis = df.groupby("Platform").agg(
+    Total_Reach=("Reach", "sum"),
+    Total_Impressions=("Impressions", "sum"),
+    Total_Likes=("Likes", "sum"),
+    Total_Comments=("Comments", "sum"),
+    Total_Shares=("Shares", "sum"),
+    Average_Engagement=("Engagement_Rate", "mean"),
+    Total_Posts=("Post_ID", "count")
+).round(2)
+
+print("\n========== PLATFORM-WISE ANALYSIS ==========")
+print(platform_analysis)
+
+best_platform = platform_analysis["Total_Reach"].idxmax()
+
+print("\nBest Platform Based on Reach:", best_platform)
+
+# 6. CONTENT TYPE ANALYSIS
+
+content_analysis = df.groupby("Content_Type").agg(
+    Total_Reach=("Reach", "sum"),
+    Average_Engagement=("Engagement_Rate", "mean"),
+    Total_Likes=("Likes", "sum")
+).round(2)
+
+print("\n========== CONTENT TYPE ANALYSIS ==========")
+print(content_analysis)
+
+best_content = content_analysis["Total_Reach"].idxmax()
+
+print("\nBest Content Type Based on Reach:", best_content)
+
+# 7. TOP 10 POSTS
+
+top_posts = df.nlargest(10, "Reach")[
+    ["Post_ID", "Platform", "Content_Type",
+     "Reach", "Likes", "Comments", "Shares",
+     "Engagement_Rate"]
+]
+
+print("\n========== TOP 10 POSTS ==========")
+print(top_posts.to_string(index=False))
+
+# 8. MONTHLY REACH ANALYSIS
+
+monthly_analysis = df.groupby("Month")["Reach"].sum()
+
+print("\n========== MONTHLY REACH ==========")
+print(monthly_analysis)
+
+# 9. VISUALIZATION SETTINGS
+
+sns.set_theme(style="whitegrid")
+
+# Create dashboard
+fig, axes = plt.subplots(2, 3, figsize=(18, 11))
+
+fig.suptitle(
+    "SOCIAL MEDIA REACH ANALYSIS DASHBOARD",
+    fontsize=20,
+    fontweight="bold"
+)
+
+# Chart 1: Platform-wise Reach
+sns.barplot(
+    data=df,
+    x="Platform",
+    y="Reach",
+    estimator=sum,
+    errorbar=None,
+    ax=axes[0, 0]
+)
+
+axes[0, 0].set_title("Total Reach by Platform")
+axes[0, 0].set_ylabel("Total Reach")
+
+# Chart 2: Content Type Reach
+sns.barplot(
+    data=df,
+    x="Content_Type",
+    y="Reach",
+    estimator=sum,
+    errorbar=None,
+    ax=axes[0, 1]
+)
+
+axes[0, 1].set_title("Reach by Content Type")
+axes[0, 1].tick_params(axis="x", rotation=20)
+
+# Chart 3: Likes by Platform
+sns.barplot(
+    data=df,
+    x="Platform",
+    y="Likes",
+    estimator=sum,
+    errorbar=None,
+    ax=axes[0, 2]
+)
+
+axes[0, 2].set_title("Total Likes by Platform")
+
+# Chart 4: Monthly Reach Trend
+monthly_data = (
+    df.groupby(df["Date"].dt.to_period("M"))["Reach"]
+    .sum()
+)
+
+axes[1, 0].plot(
+    monthly_data.index.astype(str),
+    monthly_data.values,
+    marker="o",
+    linewidth=2
+)
+
+axes[1, 0].set_title("Monthly Reach Trend")
+axes[1, 0].set_xlabel("Month")
+axes[1, 0].set_ylabel("Total Reach")
+axes[1, 0].tick_params(axis="x", rotation=45)
+
+# Chart 5: Engagement Rate by Platform
+sns.barplot(
+    data=df,
+    x="Platform",
+    y="Engagement_Rate",
+    errorbar=None,
+    ax=axes[1, 1]
+)
+
+axes[1, 1].set_title("Average Engagement Rate")
+axes[1, 1].set_ylabel("Engagement Rate (%)")
+
+# Chart 6: Reach vs Engagement
+sns.scatterplot(
+    data=df,
+    x="Reach",
+    y="Total_Engagement",
+    hue="Platform",
+    ax=axes[1, 2]
+)
+
+axes[1, 2].set_title("Reach vs Total Engagement")
+
+plt.tight_layout(rect=[0, 0, 1, 0.95])
+plt.show()
+
+# 10. CORRELATION ANALYSIS
+
+correlation = df[
+    ["Reach", "Impressions", "Likes",
+     "Comments", "Shares", "Total_Engagement"]
+].corr()
+
+print("\n========== CORRELATION MATRIX ==========")
+print(correlation.round(2))
+
+plt.figure(figsize=(9, 6))
+
+sns.heatmap(
+    correlation,
+    annot=True,
+    cmap="coolwarm",
+    fmt=".2f"
+)
+
+plt.title("Social Media Metrics Correlation")
+plt.tight_layout()
+plt.show()
+
+# 11. PLATFORM REACH PIE CHART
+
+plt.figure(figsize=(8, 8))
+
+platform_reach = df.groupby("Platform")["Reach"].sum()
+
+plt.pie(
+    platform_reach,
+    labels=platform_reach.index,
+    autopct="%1.1f%%",
+    startangle=90
+)
+
+plt.title("Platform-wise Reach Distribution")
+plt.show()
+
+# 12. EXPORT ANALYSIS RESULTS
+
+df.to_csv("social_media_reach_analysis.csv", index=False)
+
+platform_analysis.to_csv("platform_analysis.csv")
+content_analysis.to_csv("content_analysis.csv")
+
+top_posts.to_csv("top_10_posts.csv", index=False)
+
+print("\n========== PROJECT COMPLETED ==========")
+print("All analysis and visualizations completed successfully!")
+print("CSV files exported successfully.")
+
+# ============================================================
+# END OF PROJECT
+# ============================================================
